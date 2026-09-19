@@ -11,31 +11,35 @@
  * 保持「单点 + 半径」的数据模型，避开多边形绘制及其多边形-面匹配复杂度。
  * 由于 Leaflet 依赖浏览器 DOM，这里用客户端组件 + 动态 import（规避 Next 服务端渲染报错）。
  */
-"use client";
+'use client';
 
-import { useEffect, useRef, useState } from "react";
-import type * as L from "leaflet";
-import "leaflet/dist/leaflet.css";
-import { useMapStore } from "@/store/mapStore";
+import { useEffect, useRef, useState } from 'react';
+import type * as L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useMapStore } from '@/store/mapStore';
 
-const AUSTRALIA = { lat: -25.27, lng: 133.78, zoom: 4 };
-const DEFAULT_RADIUS_KM = 10; // 默认圆形选区半径
+const AUSTRALIA = {
+  lat: -37.8136,
+  lng: 144.9631,
+  zoom: 12,
+};
+const DEFAULT_RADIUS_KM = 3; // 默认圆形选区半径
 
 /** 用 Emoji 文本标记替代 Leaflet 默认图片图标（marker-icon.png / marker-shadow.png）。 */
-function buildEmojiIcon(L: typeof import("leaflet")): L.DivIcon {
+function buildEmojiIcon(L: typeof import('leaflet')): L.DivIcon {
   return L.divIcon({
     html: '<span style="font-size:30px;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.4));margin-left:-6px">📍</span>',
-    className: "", // 清空 Leaflet 默认 divIcon 样式，避免额外背景
+    className: '', // 清空 Leaflet 默认 divIcon 样式，避免额外背景
     iconSize: [30, 30],
     iconAnchor: [15, 30], // 尖端指向坐标点
   });
 }
 
 /** 城区 POI 的圆点图标（带城区名 Tooltip）。 */
-function buildPoiIcon(L: typeof import("leaflet")): L.DivIcon {
+function buildPoiIcon(L: typeof import('leaflet')): L.DivIcon {
   return L.divIcon({
     html: '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#0ea5e9;border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.5);"></span>',
-    className: "",
+    className: '',
     iconSize: [12, 12],
     iconAnchor: [6, 6],
   });
@@ -44,7 +48,7 @@ function buildPoiIcon(L: typeof import("leaflet")): L.DivIcon {
 export default function LocationPicker() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const leafletRef = useRef<typeof import("leaflet") | null>(null);
+  const leafletRef = useRef<typeof import('leaflet') | null>(null);
   const centerMarkerRef = useRef<L.Marker | null>(null);
   const circleRef = useRef<L.Circle | null>(null);
   const poiLayerRef = useRef<L.LayerGroup | null>(null);
@@ -63,7 +67,7 @@ export default function LocationPicker() {
     let cancelled = false;
     (async () => {
       if (!containerRef.current) return;
-      const L = await import("leaflet");
+      const L = await import('leaflet');
       if (cancelled) return;
       leafletRef.current = L;
 
@@ -71,14 +75,14 @@ export default function LocationPicker() {
         [AUSTRALIA.lat, AUSTRALIA.lng],
         AUSTRALIA.zoom,
       );
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
-        attribution: "© OpenStreetMap",
+        attribution: '© OpenStreetMap',
       }).addTo(map);
 
       poiLayerRef.current = L.layerGroup().addTo(map);
 
-      map.on("click", async (e: L.LeafletMouseEvent) => {
+      map.on('click', async (e: L.LeafletMouseEvent) => {
         const lat = e.latlng.lat;
         const lng = e.latlng.lng;
         map!.setView([lat, lng], Math.max(map!.getZoom(), 11));
@@ -88,12 +92,27 @@ export default function LocationPicker() {
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&accept-language=zh,en&zoom=14`,
-            { headers: { "User-Agent": "aus-job-search/1.0" }, signal: AbortSignal.timeout(8000) },
+            {
+              headers: { 'User-Agent': 'aus-job-search/1.0' },
+              signal: AbortSignal.timeout(8000),
+            },
           );
-          const d = (await res.json()) as { display_name?: string; address?: { city?: string; town?: string; state?: string } };
-          placeName = d.display_name ?? "";
-          const cityName = (d.address && (d.address.city ?? d.address.town ?? d.address.state)) || "";
-          setPicked({ lat, lng, placeName: placeName || undefined, city: cityName, radiusKm: radiusRef.current });
+          const d = (await res.json()) as {
+            display_name?: string;
+            address?: { city?: string; town?: string; state?: string };
+          };
+          placeName = d.display_name ?? '';
+          const cityName =
+            (d.address &&
+              (d.address.city ?? d.address.town ?? d.address.state)) ||
+            '';
+          setPicked({
+            lat,
+            lng,
+            placeName: placeName || undefined,
+            city: cityName,
+            radiusKm: radiusRef.current,
+          });
         } catch {
           setPicked({ lat, lng, radiusKm: radiusRef.current });
         }
@@ -124,7 +143,9 @@ export default function LocationPicker() {
     if (centerMarkerRef.current) {
       centerMarkerRef.current.setLatLng([picked.lat, picked.lng]);
     } else {
-      centerMarkerRef.current = L.marker([picked.lat, picked.lng], { icon: buildEmojiIcon(L) }).addTo(map);
+      centerMarkerRef.current = L.marker([picked.lat, picked.lng], {
+        icon: buildEmojiIcon(L),
+      }).addTo(map);
     }
   }, [picked, ready]);
 
@@ -142,13 +163,15 @@ export default function LocationPicker() {
     }
     const radiusMeters = radiusKm * 1000;
     if (circleRef.current) {
-      circleRef.current.setLatLng([picked.lat, picked.lng]).setRadius(radiusMeters);
+      circleRef.current
+        .setLatLng([picked.lat, picked.lng])
+        .setRadius(radiusMeters);
     } else {
       circleRef.current = L.circle([picked.lat, picked.lng], {
         radius: radiusMeters,
-        color: "#0ea5e9",
+        color: '#0ea5e9',
         weight: 2,
-        fillColor: "#0ea5e9",
+        fillColor: '#0ea5e9',
         fillOpacity: 0.12,
       }).addTo(map);
     }
@@ -159,13 +182,14 @@ export default function LocationPicker() {
     const map = mapRef.current;
     const L = leafletRef.current;
     if (!map || !L || !ready) return;
-    const layer = poiLayerRef.current ?? (poiLayerRef.current = L.layerGroup().addTo(map));
+    const layer =
+      poiLayerRef.current ?? (poiLayerRef.current = L.layerGroup().addTo(map));
     layer.clearLayers();
     (resolved?.suburbs ?? []).forEach((s) => {
-      if (typeof s.lat !== "number" || typeof s.lng !== "number") return;
+      if (typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
       L.marker([s.lat, s.lng], { icon: buildPoiIcon(L) })
-        .bindTooltip(`${s.name}${s.distKm != null ? ` · ${s.distKm}km` : ""}`, {
-          direction: "top",
+        .bindTooltip(`${s.name}${s.distKm != null ? ` · ${s.distKm}km` : ''}`, {
+          direction: 'top',
           offset: [0, -6],
         })
         .addTo(layer);
@@ -185,11 +209,13 @@ export default function LocationPicker() {
       <div
         ref={containerRef}
         className="h-[280px] w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm sm:h-[380px]"
-        style={{ background: "#e4ecef" }}
+        style={{ background: '#e4ecef' }}
       />
       {picked && (
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600 shadow-sm">
-          <span className="shrink-0 font-medium text-slate-800">半径 {radiusKm} km</span>
+          <span className="shrink-0 font-medium text-slate-800">
+            半径 {radiusKm} km
+          </span>
           <input
             type="range"
             min={0.5}
@@ -204,15 +230,23 @@ export default function LocationPicker() {
         </div>
       )}
       <div className="text-xs text-slate-500">
-        {!ready && "正在加载地图…"}
+        {!ready && '正在加载地图…'}
         {picked ? (
           <>
-            已选：<span className="font-medium text-slate-800">{picked.placeName || `坐标 ${picked.lat.toFixed(4)}, ${picked.lng.toFixed(4)}`}</span>
-            <span className="ml-2 text-slate-400">({picked.lat.toFixed(4)}, {picked.lng.toFixed(4)})</span>
-            <span className="ml-2 text-sky-600">· 半径 {radiusKm}km 内 {resolved?.suburbs?.length ?? 0} 个城区</span>
+            已选：
+            <span className="font-medium text-slate-800">
+              {picked.placeName ||
+                `坐标 ${picked.lat.toFixed(4)}, ${picked.lng.toFixed(4)}`}
+            </span>
+            <span className="ml-2 text-slate-400">
+              ({picked.lat.toFixed(4)}, {picked.lng.toFixed(4)})
+            </span>
+            <span className="ml-2 text-sky-600">
+              · 半径 {radiusKm}km 内 {resolved?.suburbs?.length ?? 0} 个城区
+            </span>
           </>
         ) : (
-          "点击地图选择圆心位置，将画出搜索半径并标出范围内的城区"
+          '点击地图选择圆心位置，将画出搜索半径并标出范围内的城区'
         )}
       </div>
     </div>

@@ -33,14 +33,22 @@ export const useMapStore = create<MapState>()(
       resolving: false,
       resolveError: null,
 
-      setPicked: (picked) => set({ picked, resolveError: null }),
+      // 选点即解除“解析中断”状态：若上次会话在请求未完成时关闭，resolving 被持久化
+      // 为 true，若不在此重置，page.tsx 的 resolve() 会因 `if (resolving) return` 永远短路，
+      // 导致本地再也无法自动调用 /api/resolve-location。
+      setPicked: (picked) => set({ picked, resolving: false, resolveError: null }),
       setResolved: (resolved) => set({ resolved, resolving: false, resolveError: null }),
       setResolving: (resolving) => set({ resolving }),
       setResolveError: (resolveError) => set({ resolveError, resolving: false }),
       reset: () =>
         set({ picked: null, resolved: null, resolving: false, resolveError: null }),
     }),
-    { name: "map-store" },
+    {
+      name: "map-store",
+      // 只持久化用户选点；resolving/resolved/resolveError 是瞬时/易失效状态，
+      // 持久化它们会带来脏状态（如被卡在 resolving:true）且不应跨会话复用解析结果。
+      partialize: (s) => ({ picked: s.picked }),
+    },
   ),
 );
 

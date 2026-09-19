@@ -9,9 +9,12 @@
  * suburb 无坐标，故“就近”判断以城市中心点距离 + 名称匹配为主，亦可供 LLM 参考。
  */
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import dataset from "@/data/suburbs.json";
+// 坐标表必须静态导入（而不是运行时 readFileSync）——Vercel 等服务端环境只会把
+// 被 import 到的文件打入函数包；用 readFileSync(process.cwd()/data/…) 加载会被
+// outputFileTracing 排除，导致运行时读不到、全部回退城市中心点（经纬度/距离全相同）。
+import suburbPointsData from "@/data/suburb-points.json";
+import suburbCoordsData from "@/data/suburb-coords.json";
 import type { Suburb, SuburbCity } from "@/types/suburb";
 
 /** 全部城市（按 YEEYI 城市 id 排序）。 */
@@ -101,46 +104,18 @@ export type Coord = { lat: number; lng: number };
 export type CoordSource = "geonames" | "postcode" | "city";
 
 /**
- * 从项目 data 目录读取一个 JSON 文件（带候选路径查找，缓存结果）。
- * 只在“能确定文件不存在”时才缓存空表，避免前一次读取失败导致永久空缓存。
- */
-let dataJsonCache = new Map<string, unknown>();
-function loadDataJson<T>(file: string): T | undefined {
-  if (dataJsonCache.has(file)) return dataJsonCache.get(file) as T | undefined;
-  const candidates = [
-    process.cwd(),
-    import.meta.dirname ? join(import.meta.dirname, "..") : "",
-    join(import.meta.dirname ?? "", "..", ".."),
-  ];
-  for (const base of candidates) {
-    if (!base) continue;
-    try {
-      const raw = readFileSync(join(base, "data", file), "utf-8");
-      const parsed = JSON.parse(raw) as T;
-      dataJsonCache.set(file, parsed);
-      return parsed;
-    } catch {
-      /* 尝试下一个候选路径 */
-    }
-  }
-  // 所有候选路径都失败：缓存 undefined，但仍允许下次重试（一旦文件被生成即可读到）。
-  return undefined;
-}
-
-/**
  * 按 suburbId 的“城区域”坐标表（data/suburb-points.json，GeoNames 城区级）。
- * key = suburbId 字符串，value = { lat, lng }。这是最精确的一级。
+ * key = suburbId 字符串，value = { lat, lng, source }。这是最精确的一级。
+ * 数据来自静态 import（见文件头部），保证在 Vercel 等打包环境里依然可用。
  */
 let suburbPointsCache: Map<string, { lat: number; lng: number; source: string }> | null = null;
 export function loadSuburbPoints(): Map<string, { lat: number; lng: number; source: string }> {
   if (suburbPointsCache) return suburbPointsCache;
   const map = new Map<string, { lat: number; lng: number; source: string }>();
-  const raw = loadDataJson<{ suburbs?: Record<string, Partial<Coord> & { source?: string }> }>("suburb-points.json");
-  if (raw?.suburbs) {
-    for (const [k, v] of Object.entries(raw.suburbs)) {
-      if (v && typeof v.lat === "number" && typeof v.lng === "number")
-        map.set(k, { lat: v.lat, lng: v.lng, source: v.source ?? "postcode" });
-    }
+  const raw = suburbPointsData as { suburbs?: Record<string, Partial<Coord> & { source?: string }> };
+  for (const [k, v] of Object.entries(raw.suburbs ?? {})) {
+    if (v && typeof v.lat === "number" && typeof v.lng === "number")
+      map.set(k, { lat: v.lat, lng: v.lng, source: v.source ?? "postcode" });
   }
   suburbPointsCache = map;
   return map;
@@ -148,16 +123,15 @@ export function loadSuburbPoints(): Map<string, { lat: number; lng: number; sour
 
 /**
  * 邮编中心点表（data/suburb-coords.json）。次精确一级，当作兜底。
+ * 同样静态导入，确保在 Vercel 等服务端环境中可用。
  */
 let coordMapCache: Map<string, Coord> | null = null;
 export function loadCoordMap(): Map<string, Coord> {
   if (coordMapCache) return coordMapCache;
   const map = new Map<string, Coord>();
-  const raw = loadDataJson<{ postcodes?: Record<string, Partial<Coord>> }>("suburb-coords.json");
-  if (raw?.postcodes) {
-    for (const [k, v] of Object.entries(raw.postcodes)) {
-      if (v && typeof v.lat === "number" && typeof v.lng === "number") map.set(k, { lat: v.lat, lng: v.lng });
-    }
+  const raw = suburbCoordsData as { postcodes?: Record<string, Partial<Coord>> };
+  for (const [k, v] of Object.entries(raw.postcodes ?? {})) {
+    if (v && typeof v.lat === "number" && typeof v.lng === "number") map.set(k, { lat: v.lat, lng: v.lng });
   }
   coordMapCache = map;
   return map;
