@@ -15,7 +15,6 @@ import {
   BuiltInAgent,
 } from "@copilotkit/runtime/v2";
 import { createOpenAI } from "@ai-sdk/openai";
-import type { AbstractAgent } from "@ag-ui/client";
 
 /** AI 顾问的系统提示（对应原 /api/chat 的 buildSystem，含默认过滤 PR 偏好）。 */
 const JOB_ADVISOR_SYSTEM_PROMPT = `你是「澳聘」的澳洲求职顾问，帮用户在澳洲华人求职平台找工作。
@@ -48,7 +47,9 @@ function buildAgent() {
 }
 
 function createRuntime(): CopilotRuntime {
-  const agents: Record<string, AbstractAgent> = {};
+  // 用 BuiltInAgent 类型（与运行时来自同一个 @copilotkit/runtime，避免与顶层
+  // @ag-ui/client 版本不一致导致的 AbstractAgent 类型冲突）。
+  const agents: Record<string, BuiltInAgent> = {};
   if (Boolean(process.env.LLM_API_KEY) && Boolean(process.env.LLM_BASE_URL)) {
     agents.default = buildAgent();
   }
