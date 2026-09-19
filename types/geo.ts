@@ -18,8 +18,6 @@ export interface ResolveLocationRequest {
   lat: number;
   lng: number;
   placeName?: string;
-  /** 是否使用大模型解析。默认 false（自动/启发式就近解析）；true 且配置了 LLM key 时走大模型。 */
-  useLlm?: boolean;
 }
 
 /** /api/resolve-location 的结构化解析结果。 */

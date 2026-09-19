@@ -18,10 +18,8 @@ const SAMPLES: Array<Pick<Job, "title" | "company" | "type" | "requiresPR" | "sa
   { title: "房产租赁顾问（需 PR）", company: "Metro Realty", type: "全职", requiresPR: true, salary: "底薪+提成" },
 ];
 
-/** 生成 Mock 职位（按城市/关键词做细腻化）。 */
-export function buildMockJobs(opts: { cityId?: string; cityName?: string; keyword?: string; allowPR?: boolean; page?: number; pageSize?: number }): Job[] {
-  const page = opts.page ?? 1;
-  const pageSize = opts.pageSize ?? 20;
+/** 生成 Mock 职位（按城市/关键词做细腻化；一次性返回全部，不分页）。 */
+export function buildMockJobs(opts: { cityId?: string; cityName?: string; keyword?: string; allowPR?: boolean }): Job[] {
   const allowPR = opts.allowPR ?? false;
   const cityName = opts.cityName ?? (opts.cityId ? cityDisplayName(opts.cityId) : "悉尼");
 
@@ -46,8 +44,7 @@ export function buildMockJobs(opts: { cityId?: string; cityName?: string; keywor
   // PR 过滤
   if (!allowPR) list = list.filter((j) => !j.requiresPR);
 
-  const start = (page - 1) * pageSize;
-  return list.slice(start, start + pageSize);
+  return list;
 }
 
 function suggestSuburb(cityName: string): string {
@@ -61,8 +58,4 @@ function suggestSuburb(cityName: string): string {
     黄金海岸: "Southport",
   };
   return map[cityName] ?? "CBD";
-}
-
-export function mockTotal(): number {
-  return SAMPLES.length;
 }

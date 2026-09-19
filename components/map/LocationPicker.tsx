@@ -93,7 +93,7 @@ export default function LocationPicker() {
     <div className="flex flex-col gap-3">
       <div
         ref={containerRef}
-        className="h-[420px] w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm"
+        className="h-[280px] w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm sm:h-[420px]"
         style={{ background: "#e4ecef" }}
       />
       <div className="text-xs text-slate-500">

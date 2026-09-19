@@ -14,7 +14,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useJobStore } from "@/store/jobStore";
 import { useChatStore } from "@/store/chatStore";
-import { useAgent, UseAgentUpdate } from "@copilotkit/react-core/v2/headless";
+import { useAgent, useFrontendTool, UseAgentUpdate } from "@copilotkit/react-core/v2/headless";
+import { z } from "zod";
 import type { Message } from "@ag-ui/client";
 import Markdown from "@/components/markdown/Markdown";
 import type { Job } from "@/types/job";
@@ -83,6 +84,27 @@ export default function JobCopilot() {
   const [llmConfigured, setLlmConfigured] = useState<boolean | null>(null);
   const [heuristicMessages, setHeuristicMessages] = useState<Bubble[]>([]);
   const [localBusy, setLocalBusy] = useState(false);
+
+  // 给 Copilot 助理注册一个“推荐职位”工具：效果与职位卡片上的“+ 推荐”按钮相同，
+  // 把指定 jobId 的职位加入「推荐企业」列表（前端 handler 直接写入 chatStore）。
+  useFrontendTool(
+    {
+      name: "recommendJob",
+      description:
+        "把给定职位加入「推荐企业」列表（与职位卡片上的“+ 推荐”按钮效果相同）。每次推荐一个职位调用一次，jobId 取职位数据里的 id 字段。",
+      parameters: z.object({
+        jobId: z.string().describe("要推荐的职位 id（来自当前职位数据里的 id 字段）"),
+        title: z.string().optional().describe("职位标题，用于校验"),
+      }),
+      handler: async ({ jobId }: { jobId: string }) => {
+        const job = useJobStore.getState().jobs.find((j: Job) => j.id === jobId);
+        if (!job) return { ok: false, error: `未找到职位 ${jobId}` };
+        useChatStore.getState().addRecommendation(job);
+        return { ok: true, jobId, company: job.company, title: job.title, suburb: job.suburb };
+      },
+    },
+    [],
+  );
 
   // CopilotKit 流式 agent（绑定 default agent；消息/运行状态变化时触发重渲染 → 流式展示）
   const { agent } = useAgent({
@@ -273,12 +295,12 @@ export default function JobCopilot() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
           placeholder="例：帮我选悉尼适合会计的、不要求 PR 的公司"
-          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-base leading-relaxed outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 sm:text-sm"
         />
         <button
           onClick={() => send()}
           disabled={busy || !input.trim()}
-          className="rounded-lg bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
+          className="shrink-0 rounded-lg bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-50"
         >
           发送
         </button>
@@ -296,19 +318,38 @@ export default function JobCopilot() {
             </button>
           </div>
           <ul className="flex flex-col gap-2">
-            {recommendations.map((j: Job) => (
-              <li key={j.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-slate-800">{j.company}</p>
-                  <p className="truncate text-xs text-slate-400">
-                    {j.title} · {j.suburb}
-                  </p>
-                </div>
-                <button onClick={() => removeRec(j.id)} className="shrink-0 text-xs text-slate-400 hover:text-rose-500">
-                  移除
-                </button>
-              </li>
-            ))}
+            {recommendations.map((j: Job) => {
+              const linkable = !!j.applyUrl && j.applyUrl !== "#";
+              return (
+                <li key={j.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                  <div className="min-w-0">
+                    {linkable ? (
+                      <a
+                        href={j.applyUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block hover:text-indigo-600"
+                        title="点击进入来源页面"
+                      >
+                        <p className="truncate font-medium text-slate-800">
+                          {j.company}
+                          <span className="ml-1 text-xs text-slate-400">↗</span>
+                        </p>
+                        <p className="truncate text-xs text-slate-400">{j.title} · {j.suburb}</p>
+                      </a>
+                    ) : (
+                      <>
+                        <p className="truncate font-medium text-slate-800">{j.company}</p>
+                        <p className="truncate text-xs text-slate-400">{j.title} · {j.suburb}</p>
+                      </>
+                    )}
+                  </div>
+                  <button onClick={() => removeRec(j.id)} className="shrink-0 text-xs text-slate-400 hover:text-rose-500">
+                    移除
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}

@@ -31,7 +31,7 @@ export default function JobCard({ job, onRecommend }: { job: Job; onRecommend?: 
     <div className="group rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md animate-fade-in-up">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="truncate text-base font-semibold text-slate-900">{job.title}</h3>
+          <h3 className="truncate text-base font-semibold text-slate-900" title={job.title}>{job.title}</h3>
           <p className="mt-0.5 text-sm text-slate-500">{job.company}</p>
         </div>
         {prBadge}
@@ -53,13 +53,13 @@ export default function JobCard({ job, onRecommend }: { job: Job; onRecommend?: 
         <p className="mt-2 text-xs text-sky-600">关键词命中：{job.matchedKeywords.join("、")}</p>
       )}
 
-      <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
         <span>{job.postedAt ? timeAgo(job.postedAt) : ""}</span>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           {onRecommend && (
             <button
               onClick={() => onRecommend(job)}
-              className="rounded-md bg-indigo-50 px-2.5 py-1 font-medium text-indigo-600 transition hover:bg-indigo-100"
+              className="rounded-lg bg-indigo-50 px-3 py-1.5 font-medium text-indigo-600 transition hover:bg-indigo-100 active:bg-indigo-200"
             >
               + 推荐
             </button>
@@ -69,7 +69,7 @@ export default function JobCard({ job, onRecommend }: { job: Job; onRecommend?: 
               href={job.applyUrl}
               target="_blank"
               rel="noreferrer"
-              className="rounded-md bg-slate-100 px-2.5 py-1 font-medium text-slate-600 transition hover:bg-slate-200"
+              className="rounded-lg bg-slate-100 px-3 py-1.5 font-medium text-slate-600 transition hover:bg-slate-200 active:bg-slate-300"
             >
               查看来源 ↗
             </a>

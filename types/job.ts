@@ -51,7 +51,7 @@ export interface Job {
   matchedKeywords?: string[];
 }
 
-/** 职位筛选条件（前端表单 + 分页参数）。 */
+/** 职位筛选条件（前端表单）。职位接口一次性返回全部匹配结果，不再分页。 */
 export interface JobQuery {
   /** 城市（中文名或 id 字符串）。 */
   city?: string;
@@ -63,17 +63,12 @@ export interface JobQuery {
   keyword?: string;
   /** 是否包含要求 PR 的职位（默认 false —— 前端默认过滤掉 PR）。 */
   allowPR?: boolean;
-  /** 页码（从 1 起）。 */
-  page?: number;
-  /** 每页条数。 */
-  pageSize?: number;
 }
 
-/** /api/jobs 的统一响应。 */
+/** /api/jobs 的统一响应（一次性返回全部职位，不分页）。 */
 export interface JobsResponse {
   jobs: Job[];
-  page: number;
-  pageSize: number;
+  /** 本次返回的职位总数（= jobs.length）。 */
   total: number;
   /** YEEYI 原始接口是否成功。 */
   source: "yeeyi" | "mock";

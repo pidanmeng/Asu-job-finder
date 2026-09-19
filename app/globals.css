@@ -2,6 +2,9 @@
 
 :root {
   color-scheme: light;
+  /* 底部安全区（iPhone 等），供 bottom sheet 吸收刘海/圆角 */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 html,
@@ -9,8 +12,33 @@ body {
   height: 100%;
 }
 
+html {
+  /* 防止长内容/固定定位导致的横向滚动，clip 不会破坏 sticky */
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
+  overscroll-behavior-y: none;
+}
+
+/* 触屏下拉刷新 / 长按选择保持原生体验 */
+html,
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* 底栏安全区工具类 */
+.pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+}
+.pb-safe-sub {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+.mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Leaflet 需要的样式在组件内按需引入（见 components/map/LocationPicker.tsx） */
