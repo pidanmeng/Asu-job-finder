@@ -11,6 +11,8 @@ export interface PickedLocation {
   placeName?: string;
   /** 推测城市（可选，来自 LLM 解析）。 */
   city?: string;
+  /** 圆形选区半径（km）。为空则以圆心点就近匹配少量城区。 */
+  radiusKm?: number;
 }
 
 /** /api/resolve-location 的入参。 */
@@ -18,13 +20,23 @@ export interface ResolveLocationRequest {
   lat: number;
   lng: number;
   placeName?: string;
+  radiusKm?: number;
+}
+
+/** 解析结果中的单个城区（带坐标，便于地图展示 POI）。 */
+export interface ResolvedSuburb {
+  name: string;
+  lat: number;
+  lng: number;
+  /** 距点选圆心的距离（km）。 */
+  distKm?: number;
 }
 
 /** /api/resolve-location 的结构化解析结果。 */
 export interface ResolveLocationResult {
   mainCity: string;
-  /** 物理上接近选中点的可用于职位筛选的城区名。 */
-  suburbs: string[];
+  /** 物理上接近选中点的可用于职位筛选的城区（带坐标）。 */
+  suburbs: ResolvedSuburb[];
   country: "Australia";
   /** 0-1 置信度。 */
   confidence: number;

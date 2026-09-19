@@ -15,6 +15,7 @@ next-env.d.ts
 
 # debug
 npm-debug.log*
+/dev*.log
 
 # env files
 .env
@@ -22,3 +23,10 @@ npm-debug.log*
 
 # typescript
 *.tsbuildinfo
+
+# GeoNames 原始数据（约 32MB，可重新下载；build-suburb-points.mjs 会自动拉取）
+/data/_geonames/
+/data/_geonames-au.zip
+
+# Nominatim 补齐进度（临时文件）
+/data/_nominatim-progress.json

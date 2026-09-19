@@ -12,6 +12,8 @@
     "probe": "tsx scripts/yeeyi-probe.ts",
     "gen:suburbs": "node scripts/gen-suburbs.mjs",
     "enrich:coords": "node scripts/build-suburb-coords.mjs",
+    "enrich:points": "node scripts/build-suburb-points.mjs",
+    "enrich:points:nominatim": "node scripts/enrich-points-nominatim.mjs",
     "test:geo": "tsx scripts/test-geocode.ts"
   },
   "dependencies": {

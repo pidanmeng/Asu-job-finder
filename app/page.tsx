@@ -32,7 +32,7 @@ export default function HomePage() {
       const res = await fetch("/api/resolve-location", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lat: cur.lat, lng: cur.lng, placeName: cur.placeName }),
+        body: JSON.stringify({ lat: cur.lat, lng: cur.lng, placeName: cur.placeName, radiusKm: cur.radiusKm }),
       });
       const body = (await res.json()) as { ok?: boolean; data?: any; error?: string };
       if (!body.ok || !body.data) throw new Error(body.error ?? "解析失败");
@@ -52,7 +52,7 @@ export default function HomePage() {
     setBusy(true);
     const params = new URLSearchParams();
     params.set("city", resolved.mainCity);
-    if (resolved.suburbs?.length) params.set("suburbs", resolved.suburbs.join(","));
+    if (resolved.suburbs?.length) params.set("suburbs", resolved.suburbs.map((s) => s.name).join(","));
     router.push(`/jobs?${params.toString()}`);
   };
 
@@ -77,6 +77,9 @@ export default function HomePage() {
               <p className="text-slate-400">
                 坐标：{picked.lat.toFixed(5)}, {picked.lng.toFixed(5)}
               </p>
+              {typeof picked.radiusKm === "number" && (
+                <p className="text-xs text-slate-400">搜索半径：{picked.radiusKm} km（圆圈范围内的全部城区）</p>
+              )}
               <p className="text-xs text-slate-400">选点后自动筛选城区，无需手动操作。</p>
             </div>
           ) : (
@@ -97,7 +100,7 @@ export default function HomePage() {
                 )}
               </p>
               <p className="text-slate-600">
-                候选城区：<span className="text-slate-800">{resolved.suburbs?.join("、") || "—"}</span>
+                候选城区：<span className="text-slate-800">{resolved.suburbs?.map((s) => s.name).join("、") || "—"}</span>
               </p>
               {resolved.reasoning && (
                 <p className="rounded-lg bg-slate-50 p-2 text-xs text-slate-500">💬 {resolved.reasoning}</p>

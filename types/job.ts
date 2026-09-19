@@ -51,7 +51,7 @@ export interface Job {
   matchedKeywords?: string[];
 }
 
-/** 职位筛选条件（前端表单）。职位接口一次性返回全部匹配结果，不再分页。 */
+/** 职位筛选条件（前端表单）。 */
 export interface JobQuery {
   /** 城市（中文名或 id 字符串）。 */
   city?: string;
@@ -65,11 +65,21 @@ export interface JobQuery {
   allowPR?: boolean;
 }
 
-/** /api/jobs 的统一响应（一次性返回全部职位，不分页）。 */
+/**
+ * /api/jobs 的统一响应（分页下发）。
+ * 前端滚动到底部时以 page+1 追加请求，直到 hasMore=false。
+ */
 export interface JobsResponse {
   jobs: Job[];
-  /** 本次返回的职位总数（= jobs.length）。 */
+  /**
+   * 职位总数。mock 场景为全部匹配数量；YEEYI 场景为当前页返回的条数
+   * （因未预先抓取所有页，无法得知全局总数）。
+   */
   total: number;
+  /** 当前页号（从 1 起，由服务端按 page 入参回显）。 */
+  page: number;
+  /** 是否还有下一页（用于前端决定是否继续加载）。 */
+  hasMore: boolean;
   /** YEEYI 原始接口是否成功。 */
   source: "yeeyi" | "mock";
   error?: string;
