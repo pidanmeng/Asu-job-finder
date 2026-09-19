@@ -1,0 +1,42 @@
+{
+  "name": "aus-job-search",
+  "version": "0.1.0",
+  "private": true,
+  "description": "澳大利亚找工作 Web 应用 —— Next.js + Tailwind + Zustand + CopilotKit(可选) + AI 筛选",
+  "scripts": {
+    "dev": "next dev",
+    "dev:proxy": "node scripts/dev-proxy.mjs",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "probe": "tsx scripts/yeeyi-probe.ts",
+    "gen:suburbs": "node scripts/gen-suburbs.mjs",
+    "enrich:coords": "node scripts/build-suburb-coords.mjs",
+    "test:geo": "tsx scripts/test-geocode.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^3.0.114",
+    "@copilotkit/react-core": "^1.73.0",
+    "@copilotkit/runtime": "^1.73.0",
+    "leaflet": "^1.9.4",
+    "next": "^15.1.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/leaflet": "^1.9.15",
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
