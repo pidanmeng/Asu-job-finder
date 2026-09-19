@@ -27,7 +27,7 @@ type Part = { kind: "text" | "thinking"; text: string };
 type WeakMsg = { role?: string; content?: unknown; id?: string };
 type Bubble = { id: string; role: "user" | "assistant"; text: string; parts?: Part[] };
 
-const SUGGESTIONS = ["帮我筛选 2-3 个服务员的岗位", "推荐理由里挑一个最适合我的"];
+const SUGGESTIONS = ["帮我筛选 2-3 个服务员的岗位", "整理 3 个月内发布的新岗位"];
 
 let _uid = 0;
 const uid = () => `m${Date.now().toString(36)}_${_uid++}`;
@@ -69,13 +69,106 @@ function buildUserBody(question: string, jobs: Job[], allowPR: boolean): string 
   return `${ctx}\n\n（默认优先不要求 PR，allowPR=${allowPR}）${USER_Q_MARK}${question}`;
 }
 
+/**
+ * 兜底：把对话里已记录的 recommendJob 推荐职位写入「推荐企业」列表。
+ *
+ * CopilotKit 的 useFrontendTool 在部分自托管运行时可能不会把工具调用回传给前端执行，
+ * 但模型发出的推荐仍会以两种形式出现在 agent.messages 里，这里都提取 jobId 并补写推荐：
+ *   1. 工具调用片段（tool-call / function 的 args.jobId）；
+ *   2. 工具结果消息（role:"tool"）里对 "/recommendedJobs/-" 的 JSON patch，
+ *      即形如 {"success":true,"delta":[{"op":"add","path":"/recommendedJobs/-","value":{"jobId":"6027530"}}]}。
+ * addRecommendation 内部按 id 去重，与前端 handler 直接写入不冲突，保证推荐列表始终刷新。
+ */
+function applyRecordedRecommendations(messages: WeakMsg[]) {
+  const seen = new Set<string>();
+  const collectId = (raw: unknown) => {
+    if (raw == null || raw === "") return;
+    const id = String(raw);
+    if (seen.has(id)) return;
+    seen.add(id);
+    const job = useJobStore.getState().jobs.find((j: Job) => String(j.id) === id);
+    if (job) useChatStore.getState().addRecommendation(job);
+  };
+  const collectJobIdFromValue = (value: unknown) => {
+    if (value && typeof value === "object" && !Array.isArray(value)) {
+      collectId((value as Record<string, unknown>).jobId);
+    } else if (Array.isArray(value)) {
+      for (const item of value) {
+        if (item && typeof item === "object") collectId((item as Record<string, unknown>).jobId);
+      }
+    }
+  };
+
+  for (const m of messages) {
+    const content = m.content;
+    if (Array.isArray(content)) {
+      // 1) 工具调用片段 / 组件片段 / 结果片段
+      for (const p of content as Record<string, unknown>[]) {
+        if (!p || typeof p !== "object") continue;
+        const t = p.type;
+        if (t === "tool-call") {
+          if (p.name === "recommendJob") {
+            const args = (p.args ?? {}) as Record<string, unknown>;
+            collectId(args.jobId);
+          }
+        } else if (t === "function") {
+          const fn = p.function as Record<string, unknown> | undefined;
+          if (fn?.name === "recommendJob") {
+            const rawArgs = fn.arguments;
+            if (typeof rawArgs === "string" && rawArgs.trim()) {
+              try {
+                collectId((JSON.parse(rawArgs) as Record<string, unknown>).jobId);
+              } catch {
+                /* 忽略无法解析的参数 */
+              }
+            } else if (rawArgs && typeof rawArgs === "object") {
+              collectId((rawArgs as Record<string, unknown>).jobId);
+            }
+          }
+        } else {
+          // 某些运行时把工具结果放在 text/content/result 字符串里
+          const s = p.text ?? p.content ?? p.result;
+          if (typeof s === "string" && s.includes("recommendedJobs")) {
+            try {
+              const parsed = JSON.parse(s) as Record<string, unknown>;
+              const delta = parsed?.delta;
+              if (Array.isArray(delta)) {
+                for (const patch of delta as Record<string, unknown>[]) {
+                  const path = patch?.path;
+                  if (typeof path !== "string" || !path.includes("recommendedJobs")) continue;
+                  collectJobIdFromValue(patch?.value);
+                }
+              }
+            } catch {
+              /* 忽略非 JSON 内容 */
+            }
+          }
+        }
+      }
+    } else if (typeof content === "string" && content.trim()) {
+      // 2) 工具结果消息：JSON 里 delta 对 /recommendedJobs/ 的 add patch 携带 jobId
+      try {
+        const parsed = JSON.parse(content) as Record<string, unknown>;
+        const delta = parsed?.delta;
+        if (Array.isArray(delta)) {
+          for (const patch of delta as Record<string, unknown>[]) {
+            const path = patch?.path;
+            if (typeof path !== "string" || !path.includes("recommendedJobs")) continue;
+            collectJobIdFromValue(patch?.value);
+          }
+        }
+      } catch {
+        /* 忽略非 JSON 内容 */
+      }
+    }
+  }
+}
+
 export default function JobCopilot() {
   const jobs = useJobStore((s) => s.jobs);
   const allowPR = useJobStore((s) => s.allowPR);
   const commentsEl = useRef<HTMLDivElement>(null);
 
-  const recommendations = useChatStore((s) => s.recommendations);
-  const removeRec = useChatStore((s) => s.removeRecommendation);
   const lastSummary = useChatStore((s) => s.lastSummary);
   const setLastSummary = useChatStore((s) => s.setLastSummary);
 
@@ -161,6 +254,14 @@ export default function JobCopilot() {
     if (text) setLastSummary(text);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [busy, bubbles.length]);
+
+  // 兜底：从对话里已记录的 recommendJob 工具调用/工具结果补写推荐，保证推荐列表始终刷新
+  // （addRecommendation 内部按 id 去重，与前端 handler 直接写入不冲突）
+  useEffect(() => {
+    if (!usingCopilot) return;
+    applyRecordedRecommendations(agent.messages as WeakMsg[]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agent.messages, usingCopilot]);
 
   useEffect(() => {
     if (bubbles.length) scroll();
@@ -305,54 +406,6 @@ export default function JobCopilot() {
           发送
         </button>
       </div>
-
-      {recommendations.length > 0 && (
-        <div id="recommendations" className="mt-4 rounded-xl border border-indigo-100 bg-white p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-semibold text-slate-900">⭐ 推荐企业</span>
-            <button
-              onClick={() => useChatStore.getState().clearRecommendations()}
-              className="text-xs text-slate-400 hover:text-rose-500"
-            >
-              清空
-            </button>
-          </div>
-          <ul className="flex flex-col gap-2">
-            {recommendations.map((j: Job) => {
-              const linkable = !!j.applyUrl && j.applyUrl !== "#";
-              return (
-                <li key={j.id} className="flex items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                  <div className="min-w-0">
-                    {linkable ? (
-                      <a
-                        href={j.applyUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block hover:text-indigo-600"
-                        title="点击进入来源页面"
-                      >
-                        <p className="truncate font-medium text-slate-800">
-                          {j.company}
-                          <span className="ml-1 text-xs text-slate-400">↗</span>
-                        </p>
-                        <p className="truncate text-xs text-slate-400">{j.title} · {j.suburb}</p>
-                      </a>
-                    ) : (
-                      <>
-                        <p className="truncate font-medium text-slate-800">{j.company}</p>
-                        <p className="truncate text-xs text-slate-400">{j.title} · {j.suburb}</p>
-                      </>
-                    )}
-                  </div>
-                  <button onClick={() => removeRec(j.id)} className="shrink-0 text-xs text-slate-400 hover:text-rose-500">
-                    移除
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

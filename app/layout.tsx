@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import CopilotProvider from "@/components/copilot/CopilotProvider";
+import TopBarNav from "@/components/layout/TopBarNav";
+import AppliedDrawer from "@/components/job/AppliedDrawer";
+import RecommendationsDrawer from "@/components/job/RecommendationsDrawer";
 
 export const metadata: Metadata = {
   title: "澳聘 · 澳洲找工作助手",
@@ -18,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-CN">
       <body className="min-h-screen flex flex-col">
         <CopilotProvider>
-          <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/90 backdrop-blur">
+          <header className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
             <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
               <a href="/" className="flex min-w-0 items-center gap-2 text-base font-bold text-slate-900 sm:text-lg">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 text-sm text-white">
@@ -36,19 +39,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 >
                   地图选址
                 </a>
-                <a
-                  href="/jobs"
-                  className="rounded-lg px-2.5 py-2 transition hover:bg-slate-100 hover:text-slate-900 sm:px-1 sm:py-0 sm:hover:bg-transparent"
-                >
-                  职位
-                </a>
+                <TopBarNav />
               </nav>
             </div>
           </header>
+          {/* 顶栏改为 fixed 后补回占位高度，避免内容被遮住 */}
+          <div className="h-14 w-full shrink-0" aria-hidden="true" />
           <main className="flex-1 w-full">{children}</main>
           <footer className="border-t border-slate-200 bg-white px-4 py-4 pb-safe text-center text-xs text-slate-400">
             职位数据来源于 YEEYI(亿忆) 平台公开频道，本应用仅作聚合展示；「是否要求 PR」为系统关键词判断，请以帖子原文为准。
           </footer>
+
+          {/* 全局右侧抽屉：顶栏「已投递」「推荐企业」按钮唤起 */}
+          <AppliedDrawer />
+          <RecommendationsDrawer />
         </CopilotProvider>
       </body>
     </html>

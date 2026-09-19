@@ -22,7 +22,16 @@ function timeAgo(unixSeconds?: number): string {
   return "刚刚";
 }
 
-export default function JobCard({ job, onRecommend }: { job: Job; onRecommend?: (job: Job) => void }) {
+export default function JobCard({
+  job,
+  onRecommend,
+  hideWhenApplied = true,
+}: {
+  job: Job;
+  onRecommend?: (job: Job) => void;
+  /** 职位已是“已投递”时是否隐藏卡片；列表页默认隐藏，推荐抽屉传 false 以便始终展示。 */
+  hideWhenApplied?: boolean;
+}) {
   const applied = useAppliedStore((s) => s.applied);
   const addApplied = useAppliedStore((s) => s.addApplied);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -39,8 +48,8 @@ export default function JobCard({ job, onRecommend }: { job: Job; onRecommend?: 
     </span>
   );
 
-  // 已投递：卡片自动隐藏（可在“已投递”抽屉中撤销）
-  if (isApplied) return null;
+  // 已投递：卡片自动隐藏（可在“已投递”抽屉中撤销）；推荐抽屉可通过 hideWhenApplied=false 保留展示
+  if (hideWhenApplied && isApplied) return null;
 
   return (
     <div className="group min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md animate-fade-in-up">

@@ -13,7 +13,6 @@ import { useChatStore } from "@/store/chatStore";
 import { useAppliedStore } from "@/store/appliedStore";
 import JobCard from "@/components/job/JobCard";
 import SuburbFilterModal from "@/components/job/SuburbFilterModal";
-import AppliedDrawer from "@/components/job/AppliedDrawer";
 import type { Job, JobsResponse } from "@/types/job";
 
 const JobCopilot = dynamic(() => import("@/components/chat/JobCopilot"), { ssr: false });
@@ -273,9 +272,6 @@ export default function JobsClient() {
         onConfirm={applySuburbs}
       />
     </div>
-
-      {/* 已投递：侧边抽屉 */}
-      <AppliedDrawer />
 
       {/* 移动端：AI 助手悬浮按钮（点击唤起底部抽屉） */}
       {!isDesktop && (

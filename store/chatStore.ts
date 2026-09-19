@@ -10,6 +10,8 @@ import type { Job } from "@/types/job";
 interface ChatState {
   /** AI 推荐的企业/职位。 */
   recommendations: Job[];
+  /** 「推荐企业」右侧抽屉是否打开。 */
+  recsDrawerOpen: boolean;
   /** 最近一次对话最终推荐摘要。 */
   lastSummary: string | null;
   /** 对话是否进行中。 */
@@ -20,10 +22,13 @@ interface ChatState {
   clearRecommendations: () => void;
   setLastSummary: (s: string | null) => void;
   setBusy: (v: boolean) => void;
+  /** 打开/关闭「推荐企业」抽屉。 */
+  setRecsDrawerOpen: (v: boolean) => void;
 }
 
 export const useChatStore = create<ChatState>()((set) => ({
   recommendations: [],
+  recsDrawerOpen: false,
   lastSummary: null,
   busy: false,
 
@@ -38,4 +43,5 @@ export const useChatStore = create<ChatState>()((set) => ({
   clearRecommendations: () => set({ recommendations: [] }),
   setLastSummary: (lastSummary) => set({ lastSummary }),
   setBusy: (busy) => set({ busy }),
+  setRecsDrawerOpen: (recsDrawerOpen) => set({ recsDrawerOpen }),
 }));
