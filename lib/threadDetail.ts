@@ -58,8 +58,8 @@ export function parseThreadDetail(
   if (section2.city != null) cityId = String(section2.city);
 
   const images: string[] = [];
-  const sec6Pics = (section6.pic ?? []) as unknown[];
-  if (Array.isArray(sec6Pics)) images.push(...sec6Pics.map((p) => String(p)).filter(Boolean));
+  const sec6Pics = (section6.pic ?? []) as {type: number; picUrl: string}[];
+  if (Array.isArray(sec6Pics)) images.push(...sec6Pics.map((p) => String(p.picUrl)).filter(Boolean));
 
   const views = section2.views != null ? String(section2.views) : undefined;
   const postedAt = section2.dateline ? Number(section2.dateline) : undefined;

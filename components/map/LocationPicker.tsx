@@ -60,6 +60,7 @@ export default function LocationPicker() {
   const picked = useMapStore((s) => s.picked);
   const setPicked = useMapStore((s) => s.setPicked);
   const resolved = useMapStore((s) => s.resolved);
+  const highlightSuburbName = useMapStore((s) => s.highlightSuburbName);
 
   // 初始化地图 + 单击事件（只负责落点写 store，marker/圆/POI 由下面 effect 统一渲染）
   useEffect(() => {
@@ -187,14 +188,17 @@ export default function LocationPicker() {
     layer.clearLayers();
     (resolved?.suburbs ?? []).forEach((s) => {
       if (typeof s.lat !== 'number' || typeof s.lng !== 'number') return;
-      L.marker([s.lat, s.lng], { icon: buildPoiIcon(L) })
+      const Marker = L.marker([s.lat, s.lng], { icon: buildPoiIcon(L) })
         .bindTooltip(`${s.name}${s.distKm != null ? ` · ${s.distKm}km` : ''}`, {
           direction: 'top',
           offset: [0, -6],
         })
         .addTo(layer);
+      if (highlightSuburbName === s.name) {
+        Marker.openTooltip();
+      }
     });
-  }, [resolved, ready]);
+  }, [resolved, ready, highlightSuburbName]);
 
   const handleRadiusChange = (v: number) => {
     radiusRef.current = v;
