@@ -24,6 +24,7 @@ export default function JobCard({
 }) {
   const applied = useAppliedStore((s) => s.applied);
   const addApplied = useAppliedStore((s) => s.addApplied);
+  const removeApplied = useAppliedStore((s) => s.removeApplied);
   const [detailOpen, setDetailOpen] = useState(false);
 
   const isApplied = applied.some((i) => i.job.id === job.id);
@@ -33,7 +34,7 @@ export default function JobCard({
       要求 PR
     </span>
   ) : (
-    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600">
+    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-600 whitespace-nowrap">
       不要求 PR
     </span>
   );
@@ -71,11 +72,46 @@ export default function JobCard({
         <span>{job.postedAt ? timeAgoTz(job.postedAt) : ""}</span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <button
-            onClick={() => addApplied(job)}
-            title="标记为已投递，卡片将从列表隐藏"
-            className="rounded-lg bg-emerald-50 px-3 py-1.5 font-medium text-emerald-600 transition hover:bg-emerald-100 active:bg-emerald-200"
+            onClick={() => (isApplied ? removeApplied(job.id) : addApplied(job))}
+            title={
+              isApplied
+                ? "该职位已投递，点击可撤销（卡片将重新出现在列表）"
+                : "标记为已投递，卡片将从列表隐藏"
+            }
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition ${
+              isApplied
+                ? "bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800"
+                : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100 active:bg-emerald-200"
+            }`}
           >
-            ✓ 已投递
+            {isApplied ? (
+              <svg
+                viewBox="0 0 24 24"
+                fill="currentColor"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M8.6 15.2l-3.4-3.4-1.4 1.4 4.8 4.8 7.8-7.8-1.4-1.4-6.4 6.4z"
+                />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-4 w-4"
+                aria-hidden="true"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            )}
+            {isApplied ? "已投递" : "标记已投递"}
           </button>
           {onRecommend && (
             <button

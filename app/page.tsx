@@ -82,7 +82,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-4 px-3 py-6 sm:px-4 sm:py-8 md:grid-cols-[1.4fr_1fr] md:gap-6">
+    <div className="mx-auto flex flex-col-reverse max-w-6xl gap-4 px-3 py-6 sm:px-4 sm:py-8 md:flex-row md:gap-6">
       <section id="map-area">
         <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
           在地图上选择你的位置
@@ -96,34 +96,10 @@ export default function HomePage() {
         <FollowArea resolved={resolved} />
       </section>
 
-      <aside className="flex flex-col gap-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="text-base font-semibold text-slate-900">① 你的位置</h2>
-          {picked ? (
-            <div className="mt-3 space-y-1 text-sm text-slate-600">
-              <p>📍 {picked.placeName || '（未返回地名）'}</p>
-              <p className="text-slate-400">
-                坐标：{picked.lat.toFixed(5)}, {picked.lng.toFixed(5)}
-              </p>
-              {typeof picked.radiusKm === 'number' && (
-                <p className="text-xs text-slate-400">
-                  搜索半径：{picked.radiusKm} km（圆圈范围内的全部城区）
-                </p>
-              )}
-              <p className="text-xs text-slate-400">
-                选点后自动筛选城区，无需手动操作。
-              </p>
-            </div>
-          ) : (
-            <p className="mt-3 text-sm text-slate-400">
-              尚未选点，请在地图上单击。
-            </p>
-          )}
-        </div>
-
+      <aside className="flex flex-col gap-4 md:w-1/2">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="text-base font-semibold text-slate-900">
-            ② 城区筛选结果
+            城区筛选结果
           </h2>
           {resolving ? (
             <p className="mt-3 text-sm text-slate-400">正在自动筛选城区…</p>
@@ -140,14 +116,17 @@ export default function HomePage() {
                   </span>
                 )}
               </p>
-              <p className="text-slate-600">
+              <p>
                 候选城区：
+              </p>
+
+              <p className="text-slate-600 whitespace-nowrap overflow-x-auto md:whitespace-normal md:overflow-auto">
                 {resolved.suburbs
                   ?.map((s) => s.name)
                   .map((n) => (
                     <span
                       key={n}
-                      className={['inline-block', 'whitespace-nowrap', 'rounded-md', 'cursor-pointer', 'bg-blue-50 text-blue-600 mr-2 px-2', highlightSuburbName === n ? 'font-bold' : ''].join(' ')}
+                      className={['mt-1', 'inline-block', 'whitespace-nowrap', 'rounded-md', 'cursor-pointer', 'bg-blue-50 text-blue-600 mr-2 px-2', highlightSuburbName === n ? 'font-bold' : ''].join(' ')}
                       onMouseEnter={() => setHighlightSuburbName(n)}
                       onMouseLeave={() => resetHighlightSuburbName()}
                     >
@@ -155,11 +134,11 @@ export default function HomePage() {
                     </span>
                   )) || '—'}
               </p>
-              {resolved.reasoning && (
+              {/* {resolved.reasoning && (
                 <p className="rounded-lg bg-slate-50 p-2 text-xs text-slate-500">
                   💬 {resolved.reasoning}
                 </p>
-              )}
+              )} */}
             </div>
           ) : (
             <p className="mt-3 text-sm text-slate-400">
@@ -180,7 +159,7 @@ export default function HomePage() {
               ? '正在筛选城区…'
               : busy
                 ? '跳转中…'
-                : '③ 搜索该区域职位（默认过滤 PR）'}
+                : '搜索该区域职位（默认过滤 PR）'}
           </button>
         </div>
       </aside>

@@ -28,7 +28,7 @@ export default function FollowArea({ resolved }: Props) {
 
   // 默认命名跟随当前选点/解析结果（仅当用户未手工输入时自动填充）
   useEffect(() => {
-    if (label) return;
+    // if (label) return;
     setLabel(picked?.placeName || resolved?.mainCity || "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked?.placeName, resolved?.mainCity]);
@@ -196,11 +196,26 @@ export default function FollowArea({ resolved }: Props) {
               </button>
               <button
                 onClick={() => handleRemove(f.id)}
-                className="absolute right-2 top-2 rounded-lg px-1.5 py-0.5 text-xs text-slate-400 transition hover:bg-slate-100 hover:text-rose-500"
+                className="absolute right-2 top-2 rounded-lg p-1.5 text-rose-500 transition hover:bg-rose-100 active:bg-rose-200"
                 aria-label={`取消关注 ${f.label || f.mainCity}`}
                 title="取消关注"
               >
-                取消
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                  aria-hidden="true"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
               </button>
             </li>
           ))}

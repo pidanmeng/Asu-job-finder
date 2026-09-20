@@ -53,7 +53,12 @@ export default function SuburbFilterModal({
           cities.find((c) => c.name && cityName && c.name.includes(cityName));
         const names = city ? Array.from(new Set(city.suburbs.map((s) => s.name))) : [];
         names.sort((a, b) => a.localeCompare(b));
-        setDistricts(names);
+        // 打开时把已选中的城区置顶，其余按字母序排列
+        const ordered = [
+          ...initialSelected.filter((n) => names.includes(n)),
+          ...names.filter((n) => !initialSelected.includes(n)),
+        ];
+        setDistricts(ordered);
       } catch {
         setDistricts([]);
       } finally {

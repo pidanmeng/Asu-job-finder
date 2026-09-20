@@ -174,14 +174,10 @@ export default function JobsClient() {
               </span>
             )}
           </button>
-          {source === "mock" ? (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">本地示例数据</span>
-          ) : source === "yeeyi" ? (
-            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700">YEEYI 数据</span>
-          ) : null}
           {initCity && <span className="text-sm text-slate-500">📍 {initCity}</span>}
           <div className="flex flex-wrap items-center gap-1.5">
-            {suburbs.map((s) => (
+            {/* 城区 tag：多于 3 个时折叠，仅展示前 2 个，第 3 个显示总数为「等共 N 个城区」 */}
+            {suburbs.slice(0, suburbs.length > 3 ? 2 : undefined).map((s) => (
               <span
                 key={s}
                 className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-xs text-sky-700"
@@ -197,6 +193,14 @@ export default function JobsClient() {
                 </button>
               </span>
             ))}
+            {suburbs.length > 3 && (
+              <span
+                className="inline-flex items-center rounded-full bg-sky-50 px-2 py-0.5 text-xs text-sky-700"
+                title={suburbs.join("、")}
+              >
+                等共 {suburbs.length} 个城区
+              </span>
+            )}
             {suburbs.length === 0 && <span className="text-sm text-slate-400">全部城区</span>}
             <button
               onClick={() => setSuburbModalOpen(true)}
