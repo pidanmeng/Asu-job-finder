@@ -9,10 +9,11 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useJobStore } from "@/store/jobStore";
-import { useChatStore } from "@/store/chatStore";
 import { useAppliedStore } from "@/store/appliedStore";
+import { useRecommendations } from "@/store/recsStore";
 import JobCard from "@/components/job/JobCard";
 import SuburbFilterModal from "@/components/job/SuburbFilterModal";
+import ProfileDrawer from "@/components/job/ProfileDrawer";
 import type { Job, JobsResponse } from "@/types/job";
 
 const JobCopilot = dynamic(() => import("@/components/chat/JobCopilot"), { ssr: false });
@@ -29,7 +30,7 @@ export default function JobsClient() {
   const setLoading = useJobStore((s) => s.setLoading);
   const setError = useJobStore((s) => s.setError);
   const setAllowPR = useJobStore((s) => s.setAllowPR);
-  const addRec = useChatStore((s) => s.addRecommendation);
+  const { add: addRec } = useRecommendations();
   const appliedCount = useAppliedStore((s) => s.applied.length);
   const setAppliedOpen = useAppliedStore((s) => s.setDrawerOpen);
 
@@ -43,6 +44,8 @@ export default function JobsClient() {
   // 城区可编辑：可移除某个城区，也可打开弹窗多选筛选
   const [suburbs, setSuburbs] = useState<string[]>(initSuburbs);
   const [suburbModalOpen, setSuburbModalOpen] = useState(false);
+  // 「自我介绍」抽屉开关
+  const [profileOpen, setProfileOpen] = useState(false);
 
   // 无限滚动状态：已加载页号 / 最新筛选上下文 / 请求互斥锁 / 滚动哨兵
   const pageRef = useRef(1);
@@ -153,8 +156,15 @@ export default function JobsClient() {
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-bold text-slate-900">职位列表</h1>
           <button
+            onClick={() => setProfileOpen(true)}
+            className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:border-sky-300 hover:text-sky-600"
+            title="填写/编辑自我介绍，用于「立即联系」短信与名片"
+          >
+            💁 自我介绍
+          </button>
+          <button
             onClick={() => setAppliedOpen(true)}
-            className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500"
+            className="inline-flex items-center gap-1.5 rounded-full bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-500"
             title="查看已投递职位"
           >
             📥 已投递
@@ -271,6 +281,8 @@ export default function JobsClient() {
         onClose={() => setSuburbModalOpen(false)}
         onConfirm={applySuburbs}
       />
+
+      <ProfileDrawer open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
 
       {/* 移动端：AI 助手悬浮按钮（点击唤起底部抽屉） */}

@@ -2,19 +2,19 @@
 
 /**
  * 「推荐企业」右侧抽屉。
- * 订阅 chatStore.recommendations：只要 AI 调用 recommendJob（或职位卡片“+ 推荐”）写入推荐，
- * 抽屉内容就会即时刷新。
+ * 订阅 useRecommendations()（localStorage 持久化的推荐列表）：
+ * 只要 AI 调用 recommendJob（或职位卡片“+ 推荐”）写入，抽屉内容就会即时刷新。
  * 卡片复用列表中的 JobCard（不传 onRecommend，因此不展示「+ 推荐」按钮）；
  * 已投递的职位通过 hideWhenApplied=false 仍会展示，便于查看。
  */
 import { useChatStore } from "@/store/chatStore";
+import { useRecommendations } from "@/store/recsStore";
 import JobCard from "@/components/job/JobCard";
 
 export default function RecommendationsDrawer() {
-  const recommendations = useChatStore((s) => s.recommendations);
+  const { recommendations, clear: clearRecs } = useRecommendations();
   const open = useChatStore((s) => s.recsDrawerOpen);
   const setOpen = useChatStore((s) => s.setRecsDrawerOpen);
-  const clearRecs = useChatStore((s) => s.clearRecommendations);
 
   const close = () => setOpen(false);
 

@@ -5,9 +5,13 @@
  * 打开时向 /api/jobs/[tid] 发起请求，由服务端爬取来源网页 __NEXT_DATA__ 并解析，
  * 前端把结构化详情（岗位属性 + 联系方式 + 正文）以弹窗展示。不再跳转平台详情页。
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toDataURL as qrToDataURL } from "qrcode";
 import type { Job } from "@/types/job";
 import type { JobDetail } from "@/types/jobDetail";
+import { buildVCard, vCardBlob } from "@/lib/vcard";
+import { buildSmsText, contactName, extractPhone } from "@/lib/contact";
+import { useProfile } from "@/store/profileStore";
 
 interface Props {
   job: Job | null;
@@ -24,13 +28,6 @@ function htmlToText(html: string): string {
     return (el.textContent ?? el.innerText ?? "").replace(/\s+/g, " ").trim();
   }
   return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
-}
-
-function formatTime(unixSeconds?: number): string {
-  if (!unixSeconds) return "";
-  const d = new Date(unixSeconds * 1000);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export default function JobDetailModal({ job, open, onClose }: Props) {
@@ -72,6 +69,56 @@ export default function JobDetailModal({ job, open, onClose }: Props) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, job?.id]);
+
+  // Feature 7：爬虫拿到数据后，根据「当前联系人 + 岗位信息」生成 VCard 3.0，并转成二维码。
+  const vcard = useMemo(
+    () => (job && detail?.ok ? buildVCard(detail, job) : ""),
+    [detail, job],
+  );
+  const phone = detail?.ok ? extractPhone(detail) : "";
+  const cname = detail?.ok ? contactName(detail) : "";
+  const [qr, setQr] = useState<string | null>(null);
+  // Feature 6：点击「立即联系」直接调起系统短信（不再弹窗），文案 = 自我介绍 + 岗位信息。
+  const { profile } = useProfile();
+  const contactNow = () => {
+    if (!job || !detail) return;
+    const p = extractPhone(detail);
+    if (!p) {
+      window.alert("未从职位详情解析到联系电话，无法调起短信。");
+      return;
+    }
+    const text = buildSmsText(detail, job, profile);
+    const a = document.createElement("a");
+    a.href = `sms:${p}?body=${encodeURIComponent(text)}`;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  useEffect(() => {
+    if (!vcard) {
+      setQr(null);
+      return;
+    }
+    let cancelled = false;
+    qrToDataURL(vcard, { width: 176, margin: 1 })
+      .then((url) => { if (!cancelled) setQr(url); })
+      .catch(() => { if (!cancelled) setQr(null); });
+    return () => { cancelled = true; };
+  }, [vcard]);
+
+  const downloadVcf = () => {
+    if (!vcard) return;
+    const url = URL.createObjectURL(vCardBlob(vcard));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${cname || "contact"}-${job?.id || "job"}.vcf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -134,6 +181,38 @@ export default function JobDetailModal({ job, open, onClose }: Props) {
           ) : (
             <div className="space-y-4">
               {/* 联系方式（用户关心的部分），高亮 */}
+              {vcard && (
+                <section className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <h4 className="text-sm font-semibold text-slate-900">📇 联系人名片（VCard 3.0）</h4>
+                  <div className="mt-2 flex flex-wrap items-center gap-4">
+                    <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+                      {qr ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={qr} alt={`${cname} 的名片二维码`} width={176} height={176} />
+                      ) : (
+                        <div className="flex h-[176px] w-[176px] items-center justify-center text-xs text-slate-400">
+                          二维码生成中…
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1 text-sm text-slate-600">
+                      {cname && <p className="truncate font-medium text-slate-800">姓名/称呼：{cname}</p>}
+                      {phone && <p className="truncate">电话：{phone}</p>}
+                      {job?.company && <p className="truncate">公司：{job.company}</p>}
+                      {job?.title && <p className="truncate">岗位：{job.title}</p>}
+                      <p className="text-xs text-slate-400">
+                        用手机相机 / 名片 App 扫码即可保存联系人
+                      </p>
+                      <button
+                        onClick={downloadVcf}
+                        className="mt-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100"
+                      >
+                        ⬇ 下载 .vcf 名片
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
               {(detail.contact.length > 0 || detail.tel) && (
                 <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <h4 className="text-sm font-semibold text-emerald-800">📞 联系方式</h4>
@@ -198,11 +277,17 @@ export default function JobDetailModal({ job, open, onClose }: Props) {
           ))}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 px-4 py-3">
-          <span className="text-xs text-slate-400">
-            {detail?.ok ? "已抓取来源网页信息" : "信息来源：YEEYI"}
-          </span>
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-200 px-4 py-3">
           <div className="flex gap-2">
+            {detail?.ok && job && (
+              <button
+                onClick={contactNow}
+                className="rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+                title="根据自我介绍与岗位信息编辑短信联系招聘方"
+              >
+                📨 立即联系
+              </button>
+            )}
             <button
               onClick={onClose}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-50"

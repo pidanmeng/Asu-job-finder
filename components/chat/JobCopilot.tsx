@@ -14,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useJobStore } from "@/store/jobStore";
 import { useChatStore } from "@/store/chatStore";
+import { addRecLocal } from "@/store/recsStore";
 import { useAgent, useFrontendTool, UseAgentUpdate } from "@copilotkit/react-core/v2/headless";
 import { z } from "zod";
 import type { Message } from "@ag-ui/client";
@@ -77,7 +78,8 @@ function buildUserBody(question: string, jobs: Job[], allowPR: boolean): string 
  *   1. 工具调用片段（tool-call / function 的 args.jobId）；
  *   2. 工具结果消息（role:"tool"）里对 "/recommendedJobs/-" 的 JSON patch，
  *      即形如 {"success":true,"delta":[{"op":"add","path":"/recommendedJobs/-","value":{"jobId":"6027530"}}]}。
- * addRecommendation 内部按 id 去重，与前端 handler 直接写入不冲突，保证推荐列表始终刷新。
+ * addRecLocal 内部按 id 去重并持久化到 localStorage，与前端 handler 直接写入不冲突，
+ * 保证推荐列表始终刷新。
  */
 function applyRecordedRecommendations(messages: WeakMsg[]) {
   const seen = new Set<string>();
@@ -87,7 +89,7 @@ function applyRecordedRecommendations(messages: WeakMsg[]) {
     if (seen.has(id)) return;
     seen.add(id);
     const job = useJobStore.getState().jobs.find((j: Job) => String(j.id) === id);
-    if (job) useChatStore.getState().addRecommendation(job);
+    if (job) addRecLocal(job);
   };
   const collectJobIdFromValue = (value: unknown) => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -192,7 +194,7 @@ export default function JobCopilot() {
       handler: async ({ jobId }: { jobId: string }) => {
         const job = useJobStore.getState().jobs.find((j: Job) => j.id === jobId);
         if (!job) return { ok: false, error: `未找到职位 ${jobId}` };
-        useChatStore.getState().addRecommendation(job);
+        addRecLocal(job);
         return { ok: true, jobId, company: job.company, title: job.title, suburb: job.suburb };
       },
     },
@@ -256,7 +258,7 @@ export default function JobCopilot() {
   }, [busy, bubbles.length]);
 
   // 兜底：从对话里已记录的 recommendJob 工具调用/工具结果补写推荐，保证推荐列表始终刷新
-  // （addRecommendation 内部按 id 去重，与前端 handler 直接写入不冲突）
+  // （addRecLocal 内部按 id 去重并写入 localStorage，与前端 handler 直接写入不冲突）
   useEffect(() => {
     if (!usingCopilot) return;
     applyRecordedRecommendations(agent.messages as WeakMsg[]);

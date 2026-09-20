@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { useMapStore } from '@/store/mapStore';
+import FollowArea from '@/components/map/FollowArea';
 
 // Leaflet 仅客户端加载
 const LocationPicker = dynamic(
@@ -82,7 +83,7 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto grid max-w-6xl gap-4 px-3 py-6 sm:px-4 sm:py-8 md:grid-cols-[1.4fr_1fr] md:gap-6">
-      <section>
+      <section id="map-area">
         <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
           在地图上选择你的位置
         </h1>
@@ -92,6 +93,7 @@ export default function HomePage() {
         <div className="mt-4">
           <LocationPicker />
         </div>
+        <FollowArea resolved={resolved} />
       </section>
 
       <aside className="flex flex-col gap-4">

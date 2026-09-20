@@ -6,6 +6,7 @@
  */
 import { useAppliedStore } from "@/store/appliedStore";
 import { useChatStore } from "@/store/chatStore";
+import { useRecommendations } from "@/store/recsStore";
 
 function CountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -18,7 +19,7 @@ function CountBadge({ count }: { count: number }) {
 
 export default function TopBarNav() {
   const appliedCount = useAppliedStore((s) => s.applied.length);
-  const recsCount = useChatStore((s) => s.recommendations.length);
+  const recsCount = useRecommendations().recommendations.length;
   const openApplied = useAppliedStore((s) => s.setDrawerOpen);
   const openRecs = useChatStore((s) => s.setRecsDrawerOpen);
 

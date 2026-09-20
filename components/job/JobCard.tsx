@@ -9,18 +9,8 @@
 import { useState } from "react";
 import type { Job } from "@/types/job";
 import { useAppliedStore } from "@/store/appliedStore";
+import { timeAgoTz } from "@/lib/time";
 import JobDetailModal from "@/components/job/JobDetailModal";
-
-function timeAgo(unixSeconds?: number): string {
-  if (!unixSeconds) return "";
-  const s = Math.max(0, Math.floor(Date.now() / 1000 - unixSeconds));
-  const d = Math.floor(s / 86400);
-  if (d > 30) return `${Math.floor(d / 30)}个月前`;
-  if (d > 0) return `${d}天前`;
-  const h = Math.floor(s / 3600);
-  if (h > 0) return `${h}小时前`;
-  return "刚刚";
-}
 
 export default function JobCard({
   job,
@@ -78,7 +68,7 @@ export default function JobCard({
       )}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
-        <span>{job.postedAt ? timeAgo(job.postedAt) : ""}</span>
+        <span>{job.postedAt ? timeAgoTz(job.postedAt) : ""}</span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <button
             onClick={() => addApplied(job)}
